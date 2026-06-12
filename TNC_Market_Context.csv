@@ -1,0 +1,9 @@
+County,State,Waymo_Miles_Millions,Waymo_Crashes_Total,Waymo_Police_Reported,Waymo_IPMM_Police,Benchmark_IPMM_Police,Reduction_Pct,CA_TNC_Trip_Share_Est,Notes
+San Francisco,CA,47.906,599,97,1.628,5.863,72.2%,~17%,"Highest TNC trip density in CA. 500x more trips per sq mi than rest of state (SFCTA)."
+Los Angeles,CA,37.857,277,46,1.215,3.391,64.2%,~38%,"Most total TNC trips in CA by volume (SFCTA)."
+San Mateo,CA,3.061,22,12,3.921,4.351,9.9%,~2%,"Small Waymo sample — early deployment. Reduction not statistically significant."
+Santa Clara,CA,2.554,11,3,1.175,2.299,48.9%,~3%,"Small sample."
+Maricopa,AZ,68.613,366,122,1.778,4.321,58.9%,N/A,"Largest Waymo market by miles. Phoenix metro."
+Travis,TX,10.722,86,28,1.026,4.184,75.5%,N/A,"Austin metro."
+Fulton,GA,N/A,27,N/A,N/A,N/A,N/A,N/A,"Atlanta. Too small for IPMM comparison in CSV3."
+DeKalb,GA,N/A,2,N/A,N/A,N/A,N/A,N/A,"Atlanta suburb. Minimal data."
