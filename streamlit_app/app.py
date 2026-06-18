@@ -4,6 +4,7 @@ import sqlite3
 import os
 import plotly.express as px
 import streamlit.components.v1 as components
+import numpy as np
 
 
 st.set_page_config(page_title="Progressive InVIZtational 2026", layout="wide")
@@ -50,7 +51,7 @@ miles_df, crashes_df, ipmm_df, tnc_context_df = load_data()
 
 #Add a sidebar with st.sidebar and st.selectbox to select which DataFrame to display
 #st.sidebar.radio("label", [list of options])
-page = st.sidebar.radio("Navigation", ["Overview", "Safety Gap", "County Deep Dive", "Crash Profile", "The Scale Question", "Behind the Dashboard"])  
+page = st.sidebar.radio("Navigation", ["Overview", "Safety Gap", "County Deep Dive", "Crash Profile", "The Scale Question", "Safety Trend", "Behind the Dashboard"])  
 
 #4 pages: Overview - show the miles_df with st.dataframe and a brief description of the data
 if page == "Overview":
@@ -238,6 +239,138 @@ elif page == "The Scale Question":
 
     
     st.markdown("<p style='font-size: 13px; color: #94A3B8; text-align: center;'><em>Source: California Air Resources Board, Clean Miles Standard (2021). CA TNC VMT estimated at 4.3B miles/year (2018); analysis uses 3.5B as conservative baseline.</em></p>", unsafe_allow_html=True)
+
+#add page, CUSUM analysis
+
+elif page == "Safety Trend":
+
+    st.markdown("<h1 style='text-align: center; font-size: 52px;'>Safety Trend Analysis</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 21px;'>CUSUM (Cumulative Sum) analysis tests whether Waymo's crash injury rate shifted at any detectable point as the fleet scaled. Parameters: c = 0 to prioritize early detection— appropriate when delayed detection carries higher cost than a false positive.</p>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style='background-color: #1F3347; border-left: 4px solid #00B4D8; padding: 16px 20px; border-radius: 6px; margin-bottom: 16px;'>
+    <p style='font-size: 16px; color: #F0F4F8; margin: 0;'>
+    <strong>How to read this: CUSUM works like a running scorecard. Each month Waymo's injury rate falls below the baseline average, points accumulate on the green line. When that line crosses the red dashed threshold, the improvement is statistically noticeable. The chart below shows the green line crossing in September 2024, signaling a genuine shift in Waymo's crash severity profile.
+    </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<p style='font-size: 16px; color: #94A3B8;'>The formula behind the chart:</p>", unsafe_allow_html=True)
+
+    st.latex(r"S_t = \max(0,\ S_{t-1} + (X_t - \mu - c))")
+
+    #formula
+    st.markdown("""
+    <p style='font-size: 15px; color: #94A3B8; text-align: center;'>
+    <strong style='color:#F0F4F8;'>X<sub>t</sub></strong> is the observed injury rate in month t &nbsp;·&nbsp; 
+    <strong style='color:#F0F4F8;'>μ</strong> is the baseline mean (9.4%) &nbsp;·&nbsp; 
+    <strong style='color:#F0F4F8;'>c = 0</strong> means maximum sensitivity<br>
+    The statistic resets to zero when the rate rises above baseline, so only sustained improvements build toward a signal.
+    </p>
+    """, unsafe_allow_html=True)
+
+    # Build monthly series from crashes_df
+    cusum_df = crashes_df.groupby('year_month').agg(
+        total=('sgo_report_id', 'count'),
+        injuries=('is_any_injury_reported', 'sum')
+    ).reset_index()
+    cusum_df['injury_rate'] = cusum_df['injuries'] / cusum_df['total']
+    cusum_df = cusum_df[cusum_df['total'] >= 20].reset_index(drop=True)
+    cusum_df['date_label'] = pd.to_datetime(
+        cusum_df['year_month'].astype(str), format='%Y%m'
+    ).dt.strftime('%b %Y')
+
+    # CUSUM parameters
+    mu0   = cusum_df['injury_rate'].mean()
+    sigma = cusum_df['injury_rate'].std()
+    k     = 0.0
+    h     = 3.0 * sigma
+
+    # Compute two-sided CUSUM
+    n = len(cusum_df)
+    C_upper = np.zeros(n)
+    C_lower = np.zeros(n)
+    for i in range(1, n):
+        x = cusum_df['injury_rate'].iloc[i]
+        C_upper[i] = max(0, C_upper[i-1] + (x - mu0 - k))
+        C_lower[i] = max(0, C_lower[i-1] + (mu0 - x - k))
+
+    cusum_df['cusum_upper'] = C_upper
+    cusum_df['cusum_lower'] = C_lower
+
+    # Chart 1: Monthly injury rate
+    fig1 = px.bar(
+        cusum_df,
+        x='date_label',
+        y='injury_rate',
+        title='Monthly Crash Injury Rate (months with n ≥ 20)',
+        labels={'date_label': 'Month', 'injury_rate': 'Injury Rate'},
+        color_discrete_sequence=['#00B4D8']
+    )
+    fig1.add_hline(
+        y=mu0, line_dash='dash', line_color='#94A3B8',
+        annotation_text=f'Baseline mean: {mu0:.1%}',
+        annotation_position='top right'
+    )
+    fig1.update_traces(
+        hovertemplate='<b>%{x}</b><br>Injury Rate: %{y:.1%}<extra></extra>'
+    )
+    fig1.update_layout(xaxis_tickangle=-45, height=380)
+    st.plotly_chart(fig1, use_container_width=True)
+
+    # Chart 2: CUSUM lower statistic
+    fig2 = px.line(
+        cusum_df,
+        x='date_label',
+        y='cusum_lower',
+        title='CUSUM Lower Statistic — Detecting Safety Improvement',
+        labels={'date_label': 'Month', 'cusum_lower': 'CUSUM Statistic'},
+        color_discrete_sequence=['#3fb950']
+    )
+    fig2.add_hline(
+        y=h, line_dash='dash', line_color='#f85149',
+        annotation_text=f'Detection threshold (3σ = {h:.3f})',
+        annotation_position='top right'
+    )
+    signal_rows = cusum_df[cusum_df['cusum_lower'] >= h]
+    if not signal_rows.empty:
+        signal_idx = signal_rows.index[0]
+        fig2.add_annotation(
+            x=cusum_df.loc[signal_idx, 'date_label'],
+            y=cusum_df.loc[signal_idx, 'cusum_lower'],
+            text="First signal: Sep 2024",
+            showarrow=True,
+            arrowhead=2,
+            arrowcolor='#00B4D8',
+            font=dict(color='#00B4D8', size=12),
+            ax=40, ay=-40
+        )
+    fig2.update_traces(
+        hovertemplate='<b>%{x}</b><br>CUSUM: %{y:.4f}<extra></extra>'
+    )
+    fig2.update_layout(xaxis_tickangle=-45, height=380)
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # Finding callout
+    st.divider()
+    st.markdown("<h3 style='text-align: center;'>What CUSUM Found</h3>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("First Improvement Signal", "Sep 2024")
+        st.markdown("<p style='font-size: 16px; color: #94A3B8;'>A statistically significant downward shift in crash injury rate— consistent with a system maturation event in Waymo's AV platform.</p>", unsafe_allow_html=True)
+    with col2:
+        st.metric("Late 2025 Signal", "Nov–Dec 2025 ↑")
+        st.markdown("<p style='font-size: 16px; color: #94A3B8;'>An early upward signal in late 2025 suggests the injury rate may be trending back toward baseline. Continued monitoring warranted.</p>", unsafe_allow_html=True)
+
+    st.markdown(
+        "<p style='font-size: 13px; color: #94A3B8; text-align: center;'>"
+        "<em>Parameters: c = 0 (prioritizes early detection; appropriate when delayed detection cost "
+        "exceeds false positive cost), threshold h = 3σ. Methodology: Sokol, J.,Georgia Tech MSA. "
+        "Only months with n ≥ 20 crash reports included.</em></p>",
+        unsafe_allow_html=True
+    )
+
+#closing page
 
 elif page == "Behind the Dashboard":
     st.markdown("<h1 style='text-align: center; font-size: 52px;'>Behind the Dashboard</h1>", unsafe_allow_html=True)
