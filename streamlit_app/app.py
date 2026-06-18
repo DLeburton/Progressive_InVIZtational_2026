@@ -83,7 +83,7 @@ if page == "Overview":
     components.html(road_html, height=600, scrolling=False)
 
     st.markdown("<h1 style='text-align: center; font-size: 52px;'>Overview</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 21px;'>Waymo has logged 170.7 million rider-only miles across five U.S. markets since September 2020 — and in that time, reported 1,390 crashes. That number sounds large until you compare it to the rate. This dashboard explores what Waymo's safety record actually looks like, what it means relative to human TNC drivers, and why it matters for the future of ride-share insurance.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 21px;'>Waymo has logged 170.7 million rider-only miles across five U.S. markets since September 2020— and in that time, reported 1,390 crashes. That number sounds large until you compare it to the rate. This dashboard explores what Waymo's safety record actually looks like, what it means relative to human TNC drivers, and why it matters for the future of ride-share insurance.</p>", unsafe_allow_html=True)
     #st.subheader("Miles Driven Data")
     #st.dataframe(miles_df)
     #st.write("The 'Miles Driven Data' table shows the total miles driven by Waymo in millions, broken down by county. This data is crucial for understanding the scale of Waymo's operations and serves as a baseline for analyzing safety performance in relation to miles driven.")   
