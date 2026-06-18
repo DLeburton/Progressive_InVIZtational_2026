@@ -354,6 +354,19 @@ elif page == "Safety Trend":
     # Finding callout
     st.divider()
     st.markdown("<h3 style='text-align: center;'>What CUSUM Found</h3>", unsafe_allow_html=True)
+
+    
+    st.markdown("""
+    <div style='background-color: #1F3347; border-left: 4px solid #3fb950; padding: 16px 20px; border-radius: 6px; margin: 16px 0;'>
+    <p style='font-size: 18px; color: #F0F4F8; margin: 0;'>
+    <strong>Bottom line:</strong> Starting in September 2024, when Waymo got into a crash, 
+    it was less likely to result in an injury. That pattern was consistent enough over the following 
+    months to be statistically detectable. A late signal in November and December 2025 
+    suggests the injury rate may be ticking back up, which is worth watching.
+    </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     col1, col2 = st.columns(2)
     with col1:
         st.metric("First Improvement Signal", "Sep 2024")
