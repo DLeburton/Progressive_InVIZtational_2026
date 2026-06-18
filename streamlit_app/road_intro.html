@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0e14;
+  overflow: hidden;
+  width: 100%;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0; left: 0;
+}
+#phase-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  white-space: nowrap;
+}
+#phase-label.visible { opacity: 1; }
+#ipmm-human {
+  position: absolute;
+  bottom: 110px;
+  right: 80px;
+  text-align: right;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+#ipmm-human.visible { opacity: 1; }
+#ipmm-human .num {
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #f85149;
+  line-height: 1;
+}
+#ipmm-human .unit { font-size: 12px; color: #8b949e; margin-top: 4px; }
+#ipmm-human .sub  { font-size: 10px; color: #6e7681; margin-top: 2px; }
+#ipmm-waymo {
+  position: absolute;
+  bottom: 110px;
+  right: 80px;
+  text-align: right;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+#ipmm-waymo.visible { opacity: 1; }
+#ipmm-waymo .num {
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #00c7ff;
+  line-height: 1;
+}
+#ipmm-waymo .unit { font-size: 12px; color: #8b949e; margin-top: 4px; }
+#ipmm-waymo .sub  { font-size: 10px; color: #6e7681; margin-top: 2px; }
+#reduction-badge {
+  position: absolute;
+  bottom: 110px;
+  left: 80px;
+  background: rgba(63,185,80,0.12);
+  border: 1px solid rgba(63,185,80,0.3);
+  border-radius: 12px;
+  padding: 14px 20px;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+#reduction-badge.visible { opacity: 1; }
+#reduction-badge .val   { font-size: 34px; font-weight: 800; color: #3fb950; }
+#reduction-badge .label { font-size: 11px; color: #8b949e; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<canvas id="road"></canvas>
+<div id="phase-label"></div>
+
+<div id="ipmm-human">
+  <div class="num" id="human-num">0.00</div>
+  <div class="unit">crashes per million miles</div>
+  <div class="sub">police-reported · human TNC benchmark</div>
+</div>
+
+<div id="ipmm-waymo">
+  <div class="num" id="waymo-num">0.00</div>
+  <div class="unit">crashes per million miles</div>
+  <div class="sub">police-reported · Waymo actual</div>
+</div>
+
+<div id="reduction-badge">
+  <div class="val">&#8595; 64.7%</div>
+  <div class="label">fewer crashes than human benchmark</div>
+</div>
+
+<script>
+const canvas = document.getElementById('road');
+const ctx = canvas.getContext('2d');
+const carW = 110, carH = 46;
+const humanCrashPcts = [0.12, 0.27, 0.42, 0.57, 0.72, 0.87];
+const waymoCrashPcts  = [0.62];
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function drawBg(W, H, roadY, roadH) {
+  const grad = ctx.createLinearGradient(0, 0, 0, roadY);
+  grad.addColorStop(0, '#060a10');
+  grad.addColorStop(1, '#0d1520');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, roadY + roadH);
+  ctx.fillStyle = '#0a0e14';
+  ctx.fillRect(0, roadY + roadH, W, H - roadY - roadH);
+}
+
+function drawRoadSurface(W, roadY, roadH) {
+  ctx.fillStyle = '#1c2128';
+  ctx.fillRect(0, roadY, W, roadH);
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, roadY); ctx.lineTo(W, roadY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, roadY + roadH); ctx.lineTo(W, roadY + roadH); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([30, 20]);
+  ctx.beginPath(); ctx.moveTo(0, roadY + roadH / 2); ctx.lineTo(W, roadY + roadH / 2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawCar(x, roadY, roadH, isWaymo) {
+  const color = isWaymo ? '#00c7ff' : '#f59e0b';
+  const cy = roadY + roadH * 0.28;
+  const r = 6;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(x + carW * 0.5, cy + carH + 4, carW * 0.44, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x + r, cy + carH);
+  ctx.lineTo(x + carW - r, cy + carH);
+  ctx.quadraticCurveTo(x + carW, cy + carH, x + carW, cy + carH - r);
+  ctx.lineTo(x + carW, cy + carH * 0.45);
+  ctx.lineTo(x + carW * 0.82, cy);
+  ctx.lineTo(x + carW * 0.22, cy);
+  ctx.lineTo(x, cy + carH * 0.45);
+  ctx.lineTo(x, cy + carH - r);
+  ctx.quadraticCurveTo(x, cy + carH, x + r, cy + carH);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.moveTo(x + carW * 0.24, cy + 4); ctx.lineTo(x + carW * 0.45, cy + 4);
+  ctx.lineTo(x + carW * 0.45, cy + carH * 0.42); ctx.lineTo(x + carW * 0.26, cy + carH * 0.42);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + carW * 0.55, cy + 4); ctx.lineTo(x + carW * 0.80, cy + 4);
+  ctx.lineTo(x + carW * 0.78, cy + carH * 0.42); ctx.lineTo(x + carW * 0.55, cy + carH * 0.42);
+  ctx.closePath(); ctx.fill();
+  [0.18, 0.78].forEach(xp => {
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.arc(x + carW * xp, cy + carH, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a2a2a';
+    ctx.beginPath(); ctx.arc(x + carW * xp, cy + carH, 7, 0, Math.PI * 2); ctx.fill();
+  });
+  if (isWaymo) {
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('W', x + carW * 0.5, cy + carH * 0.72);
+  }
+  ctx.restore();
+}
+
+function drawCrash(cx, roadY, isWaymo) {
+  const cy = roadY - 22;
+  const color = isWaymo ? '#3fb950' : '#f85149';
+  ctx.save();
+  ctx.fillStyle = isWaymo ? 'rgba(63,185,80,0.14)' : 'rgba(248,81,73,0.14)';
+  ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+  const s = 8;
+  ctx.beginPath();
+  ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
+  ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+  ctx.stroke();
+  ctx.strokeStyle = color + '55'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, cy + 18); ctx.lineTo(cx, roadY); ctx.stroke();
+  ctx.restore();
+}
+
+function runHuman(onComplete) {
+  const phaseEl   = document.getElementById('phase-label');
+  const counterEl = document.getElementById('ipmm-human');
+  const numEl     = document.getElementById('human-num');
+  phaseEl.textContent = 'Human TNC Driver · California';
+  phaseEl.classList.add('visible');
+  let carX = -carW - 20;
+  const shown = new Set();
+  const TARGET = 4.51;
+  function tick() {
+    const W = canvas.width, H = canvas.height;
+    const roadY = H * 0.58, roadH = 90;
+    ctx.clearRect(0, 0, W, H);
+    drawBg(W, H, roadY, roadH);
+    drawRoadSurface(W, roadY, roadH);
+    humanCrashPcts.forEach(p => { if (carX + carW * 0.5 > p * W) shown.add(p); });
+    shown.forEach(p => drawCrash(p * W, roadY, false));
+    drawCar(carX, roadY, roadH, false);
+    const progress = Math.min(1, (carX + carW) / (W + carW));
+    numEl.textContent = (TARGET * progress).toFixed(2);
+    if (!counterEl.classList.contains('visible') && carX > W * 0.08) counterEl.classList.add('visible');
+    carX += 2.8;
+    if (carX < W + 20) { requestAnimationFrame(tick); }
+    else { numEl.textContent = TARGET.toFixed(2); setTimeout(onComplete, 1200); }
+  }
+  tick();
+}
+
+function runWaymo() {
+  const phaseEl   = document.getElementById('phase-label');
+  const humanEl   = document.getElementById('ipmm-human');
+  const counterEl = document.getElementById('ipmm-waymo');
+  const numEl     = document.getElementById('waymo-num');
+  const badgeEl   = document.getElementById('reduction-badge');
+  humanEl.style.opacity = '0';
+  phaseEl.style.opacity = '0';
+  setTimeout(() => { phaseEl.textContent = 'Waymo Autonomous Vehicle · Same Roads'; phaseEl.style.opacity = '1'; }, 400);
+  let carX = -carW - 20;
+  const shown = new Set();
+  const TARGET = 1.59;
+  function tick() {
+    const W = canvas.width, H = canvas.height;
+    const roadY = H * 0.58, roadH = 90;
+    ctx.clearRect(0, 0, W, H);
+    drawBg(W, H, roadY, roadH);
+    drawRoadSurface(W, roadY, roadH);
+    waymoCrashPcts.forEach(p => { if (carX + carW * 0.5 > p * W) shown.add(p); });
+    shown.forEach(p => drawCrash(p * W, roadY, true));
+    drawCar(carX, roadY, roadH, true);
+    const progress = Math.min(1, (carX + carW) / (W + carW));
+    numEl.textContent = (TARGET * progress).toFixed(2);
+    if (!counterEl.classList.contains('visible') && carX > W * 0.08) counterEl.classList.add('visible');
+    carX += 2.8;
+    if (carX < W + 20) { requestAnimationFrame(tick); }
+    else { numEl.textContent = TARGET.toFixed(2); setTimeout(() => badgeEl.classList.add('visible'), 400); }
+  }
+  tick();
+}
+
+setTimeout(() => runHuman(runWaymo), 300);
+</script>
+</body>
+</html>
