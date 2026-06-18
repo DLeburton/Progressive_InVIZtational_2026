@@ -390,4 +390,4 @@ elif page == "Behind the Dashboard":
     st.markdown("<p style='font-size: 21px;'>This project is built on a fully reproducible data pipeline— raw Waymo safety CSVs cleaned with Python, loaded into SQLite, and served through a live Streamlit app deployed on Streamlit Cloud.</p>", unsafe_allow_html=True)
     img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_pipeline.png")
     st.image(img_path, use_container_width=True)
-    st.markdown("<p style='font-size: 16px; color: #94A3B8;'><strong>clean_data.py</strong>: reads and standardizes raw Waymo CSVs into consistent dataframes<br><strong>load_db.py</strong>: loads cleaned data into a local SQLite database<br><strong>app.py</strong>: queries the database and renders all five interactive pages</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 16px; color: #94A3B8;'><strong>clean_data.py</strong>: reads and standardizes raw Waymo CSVs into consistent dataframes<br><strong>load_db.py</strong>: loads cleaned data into a local SQLite database<br><strong>app.py</strong>: queries the database and renders all seven interactive pages</p>", unsafe_allow_html=True)
