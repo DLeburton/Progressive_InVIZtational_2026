@@ -34,10 +34,11 @@ canvas {
   white-space: nowrap;
 }
 #phase-label.visible { opacity: 1; }
+
 #ipmm-human {
   position: absolute;
-  bottom: 110px;
-  right: 80px;
+  bottom: 8%;
+  right: 4%;
   text-align: right;
   opacity: 0;
   transition: opacity 0.5s ease;
@@ -52,10 +53,11 @@ canvas {
 }
 #ipmm-human .unit { font-size: 12px; color: #8b949e; margin-top: 4px; }
 #ipmm-human .sub  { font-size: 10px; color: #6e7681; margin-top: 2px; }
+
 #ipmm-waymo {
   position: absolute;
-  bottom: 110px;
-  right: 80px;
+  bottom: 8%;
+  right: 4%;
   text-align: right;
   opacity: 0;
   transition: opacity 0.5s ease;
@@ -70,10 +72,11 @@ canvas {
 }
 #ipmm-waymo .unit { font-size: 12px; color: #8b949e; margin-top: 4px; }
 #ipmm-waymo .sub  { font-size: 10px; color: #6e7681; margin-top: 2px; }
+
 #reduction-badge {
   position: absolute;
-  bottom: 110px;
-  left: 80px;
+  bottom: 8%;
+  left: 4%;
   background: rgba(63,185,80,0.12);
   border: 1px solid rgba(63,185,80,0.3);
   border-radius: 12px;
@@ -84,6 +87,16 @@ canvas {
 #reduction-badge.visible { opacity: 1; }
 #reduction-badge .val   { font-size: 34px; font-weight: 800; color: #3fb950; }
 #reduction-badge .label { font-size: 11px; color: #8b949e; margin-top: 4px; }
+
+@media (max-width: 600px) {
+  #ipmm-human .num, #ipmm-waymo .num { font-size: 32px; }
+  #ipmm-human .unit, #ipmm-waymo .unit { font-size: 10px; }
+  #ipmm-human .sub, #ipmm-waymo .sub { font-size: 9px; }
+  #reduction-badge .val { font-size: 22px; }
+  #reduction-badge .label { font-size: 10px; }
+  #reduction-badge { padding: 10px 14px; }
+  #phase-label { font-size: 10px; }
+}
 </style>
 </head>
 <body>
@@ -142,7 +155,10 @@ function drawRoadSurface(W, roadY, roadH) {
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
   ctx.lineWidth = 3;
   ctx.setLineDash([30, 20]);
-  ctx.beginPath(); ctx.moveTo(0, roadY + roadH / 2); ctx.lineTo(W, roadY + roadH / 2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, roadY + roadH / 2);
+  ctx.lineTo(W, roadY + roadH / 2);
+  ctx.stroke();
   ctx.setLineDash([]);
 }
 
