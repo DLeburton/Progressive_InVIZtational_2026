@@ -174,24 +174,41 @@ elif page == "Crash Profile":
     st.title("Crash Profile")
     st.markdown("<p style='font-size: 21px;'>Not all crashes are equal. This page breaks down Waymo's 1,390 reported incidents by crash type— showing what kinds of contact actually occur, how often they result in injury, and how rarely they involve serious outcomes. The profile reflects a vehicle that crashes differently than a human driver.</p>", unsafe_allow_html=True)
 
+    #chart
     crash_type_counts = crashes_df['crash_type'].value_counts().reset_index()
     crash_type_counts.columns = ['crash_type', 'count']
     
-    fig = px.pie(
+    #change crash type naming
+    label_map = {
+    'V2V F2R':          'Rear-End',
+    'V2V Lateral':      'Sideswipe',
+    'V2V Backing':      'Backing',
+    'V2V Head-on':      'Head-On',
+    'V2V Intersection': 'Intersection',
+    'Single Vehicle':   'Single Vehicle',
+    'Secondary Crash':  'Secondary Crash',
+    'All Others':       'All Others',
+    'Motorcycle':       'Motorcycle Involved',
+    'Cyclist':          'Cyclist Involved',
+    'Pedestrian':       'Pedestrian Involved'
+    }
+
+    crash_type_counts['crash_type'] = crash_type_counts['crash_type'].map(label_map)
+    crash_type_counts = crash_type_counts.sort_values('count', ascending=True)
+
+    crash_type_counts = crash_type_counts.sort_values('count', ascending=True)
+
+    fig = px.bar(
         crash_type_counts,
-        names='crash_type',
-        values='count',
+        x='count',
+        y='crash_type',
+        orientation='h',
         title="Distribution of Crash Types",
-        color_discrete_sequence=["#00B4D8", "#94A3B8", "#1F3347", "#0D7A94", "#F0F4F8"]
+        labels={'count': 'Number of Crashes', 'crash_type': ''},
+        color_discrete_sequence=['#00B4D8']
     )
-
-    fig.update_traces(
-        hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Share: %{percent}<extra></extra>"
-    )
-    fig.update_layout(
-        height=800
-    )
-
+    fig.update_traces(hovertemplate='<b>%{y}</b><br>Count: %{x}<extra></extra>')
+    fig.update_layout(height=420)
     st.plotly_chart(fig, use_container_width=True)
 
 
