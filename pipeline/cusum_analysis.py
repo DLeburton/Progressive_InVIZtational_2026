@@ -1,5 +1,5 @@
 """
-CUSUM Analysis 
+CUSUM 
 Detects statistically significant shifts in Waymo's monthly crash injury rate.
 """
 
@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import os
 
-# ── Load data ──────────────────────────────────────────────
+# load data
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH  = os.path.join(BASE_DIR, "waymo_tnc.db")
 
@@ -26,14 +26,14 @@ conn.close()
 df['injury_rate'] = df['injuries'] / df['total']
 df = df[df['total'] >= 20].reset_index(drop=True)
 
-# ── CUSUM parameters ───────────────────────────────────────
+# CUSUM parameters 
 # Baseline: mean and std dev of the full filtered series
 mu0   = df['injury_rate'].mean()   # target (baseline) mean
 sigma = df['injury_rate'].std()    # process std dev
 k = 0.0   # c=0: prioritize early detection over false positive risk
 h = 3.0 * sigma   # was 4.0                # decision threshold (4-sigma sensitivity)
 
-# ── Two-sided CUSUM ────────────────────────────────────────
+# Two-sided CUSUM
 # Upper CUSUM: detects upward shift   (injury rate worsening)
 # Lower CUSUM: detects downward shift (injury rate improving)
 n = len(df)
@@ -50,7 +50,7 @@ df['cusum_lower'] = C_lower
 df['signal_upper'] = C_upper > h
 df['signal_lower'] = C_lower > h
 
-# ── Results ────────────────────────────────────────────────
+# Results
 upper_signals = df[df['signal_upper']]['year_month'].tolist()
 lower_signals = df[df['signal_lower']]['year_month'].tolist()
 
@@ -69,7 +69,7 @@ if lower_signals:
     print(f"\n>>> First detectable improvement: {lower_signals[0]}")
 print("=" * 50)
 
-# ── Save results ───────────────────────────────────────────
+# results
 out_path = os.path.join(BASE_DIR, "pipeline", "cusum_results.csv")
 df.to_csv(out_path, index=False)
 print(f"Results saved to pipeline/cusum_results.csv")
