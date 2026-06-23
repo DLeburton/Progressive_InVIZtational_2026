@@ -93,15 +93,27 @@ if page == "Overview":
     
 
     st.image(img_path, use_container_width=True)
-
+  
+    
 elif page == "Safety Gap":  
     st.title("Safety Gap Analysis")
     #st.write("In this section, we analyze the safety gap between Waymo's performance and the benchmark. The safety gap is calculated as the difference in crash rates between Waymo and the benchmark, normalized by miles driven. A positive safety gap indicates that Waymo has a higher crash rate than the benchmark, while a negative safety gap indicates that Waymo has a lower crash rate than the benchmark.")
     st.markdown("<p style='font-size: 21px;'>Waymo produces 65–90% fewer crashes per million miles than human TNC drivers across every outcome category. Waymo's incident rate (IPMM) plotted against the non-dynamic human driver benchmark.</p>", unsafe_allow_html=True)
 
     #Filter ipmm_df to rows where county_name == "All Locations (mileage blended)"
-    ipmm_df_filtered = ipmm_df[ipmm_df['county_name'] == "All Locations (mileage blended)"]
-    
+    ipmm_df_filtered = ipmm_df[ipmm_df['county_name'] == "All Locations (mileage blended)"].copy()
+
+    #remove non-dynamic text
+    label_map = {
+        'Any Airbag Deployment (non-Dynamic)':         'Any Airbag Deployment',
+        'Any-injury-reported (non-Dynamic)':           'Any Injury Reported',
+        'Any-injury-reported (observed, non-Dynamic)': 'Any Injury Reported (Observed)',
+        'Ego Vehicle Airbag Deployment (non-Dynamic)': 'Ego Vehicle Airbag Deployment',
+        'Police-reported (non-Dynamic)':               'Police-Reported',
+        'Suspected Serious Injury+ (non-Dynamic)':     'Suspected Serious Injury'
+    }
+    ipmm_df_filtered['benchmark_comparison'] = ipmm_df_filtered['benchmark_comparison'].map(label_map).fillna(ipmm_df_filtered['benchmark_comparison'])
+
     st.subheader("Safety Gap Data")
 
     #remove the st.dataframe() and replace it with a chart
@@ -115,8 +127,7 @@ elif page == "Safety Gap":
     # barmode — set to "group" for side-by-side bars
     # Then display it with st.plotly_chart().
     
-       
-    #hover plotly bar
+
     fig = px.bar(
         ipmm_df_filtered,
         x="benchmark_comparison",
@@ -137,11 +148,11 @@ elif page == "Safety Gap":
     ))
 
     fig.update_layout(xaxis_tickangle=-35)
-
     st.plotly_chart(fig, use_container_width=True)
-  
-    
-   
+
+
+
+
 elif page == "County Deep Dive":
     st.title("County Deep Dive")
     st.markdown("<p style='font-size: 21px;'>The safety advantage holds at the local level. Police-reported IPMM by county, comparing Waymo's rate against the human TNC benchmark in each market. San Francisco, Los Angeles, Phoenix, Austin, and Atlanta all tell the same story.</p>", unsafe_allow_html=True)
